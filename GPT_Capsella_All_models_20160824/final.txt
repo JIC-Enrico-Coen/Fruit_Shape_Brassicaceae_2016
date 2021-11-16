@@ -1,0 +1,7 @@
+
+if realtime == 160
+    m = leaf_subdivide( m, 'morphogen','id_midvalve',...
+        'min',0.5,'max',1,...
+        'mode','mid','levels','all');
+    
+end

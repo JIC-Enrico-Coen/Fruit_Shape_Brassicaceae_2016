@@ -1,0 +1,7 @@
+
+% In this section you may modify the mesh in any way whatsoever.
+    if (Steps(m)==0) && m.globalDynamicProps.doinit % First iteration
+       m = leaf_fix_vertex( m, 'vertex', [], 'dfs', '' ); % unfix all vertices from the start.  
+        m = leaf_plotoptions( m, 'hiresdpi', 300);
+        
+    end

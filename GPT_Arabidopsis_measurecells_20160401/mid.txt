@@ -1,0 +1,183 @@
+
+% In this section you may modify the mesh in any way that does not
+% alter the set of nodes.
+
+    
+   if (Steps(m)==0) && m.globalDynamicProps.doinit  % Initialisation code.
+        %% PRN Polariser Regulatory Network 
+            
+            proxorg_ind= m.nodes(:,3)<-19.5;
+            id_proxorg_p(proxorg_ind) = 1;
+            P(proxorg_ind) = 1;
+            m = leaf_fix_mgen( m, polariser_i,'vertex',find(proxorg_ind),'fix', 1);
+            
+            m = leaf_mgen_conductivity(m, polariser_i, 5); 
+            m = leaf_mgen_absorption(m, polariser_i, 0.001);
+            
+             id_distorg_p(m.nodes(:,3)>17.5) = 1;
+            
+             basenodes_ind= min(m.nodes(:,3));         
+             id_basenodes_p(m.nodes(:,3)==basenodes_ind) =1;
+             
+             m = leaf_fix_vertex( m, 'vertex', id_basenodes_p==1, 'dfs', 'z' ); 
+ 
+             
+         %% Growth factors
+          
+            % STYLE
+                id_style_p(m.nodes(:,3)>14) = 1;
+                 
+                m.mgen_production(:, s_style_i) = id_style_p;           % whereever id_style is s_rep is produced
+                m = leaf_mgen_conductivity(m, s_style_i, 0.4);      % how much s_style is conducted
+                m = leaf_mgen_absorption(m, s_style_i, 0);         % how much s_style is degraded at each node
+                m = leaf_mgen_dilution(m, s_style_i, 0); 
+ 
+                m.morphogenclamp( id_style_p==1, s_style_i ) = 1;       % Clamping the highest value of s_style to 1.
+                s_style_p = 1 * id_style_p; 
+                
+            % BASE
+                id_base_p(m.nodes(:,3)<-16) = 1;
+                
+                m.mgen_production(:, s_base_i) = id_base_p;           % whereever id_rep is s_rep is produced
+                m = leaf_mgen_conductivity(m, s_base_i, 0.4);      % how much s_rep is conducted
+                m = leaf_mgen_absorption(m, s_base_i, 0);         % how much s_rep is degraded at each node
+                m = leaf_mgen_dilution(m, s_base_i, 0); 
+ 
+                m.morphogenclamp( id_base_p==1, s_base_i ) = 1;       % Clamping the highest value of s_base to 1.
+                s_base_p = 1 * id_base_p;  
+                
+           % REP
+                id_rep_p((abs(m.nodes(:,1))<10)&(m.nodes(:,3)<14)) = 1;
+                
+           % MIDVALVE
+                id_midvalve_p((abs(m.nodes(:,2))<7.5)&(m.nodes(:,3)<14)) = 1;     
+                
+           % VALVE
+               id_valve_p= 1- (id_midvalve_p+id_rep_p+id_style_p); 
+                
+    end
+ if (Steps(m)==24) && m.globalDynamicProps.doinit  % Initialisation code.
+        m = leaf_makesecondlayer( m, 'mode', 'few', 'numcells', 100, 'relarea', 0.002, ...     %relarea for 0-4 DAI 0.005
+                'allowoveredge', false, 'allowoverlap', false );
+            % Must set 'allowoveredge' to false, to avoid non-circular
+            % cells at the edge of the mesh.
+        % Need to re-establish the variables c_growth_i and c_growth,
+        % because we've just changed the second layer.  c_growth is used to
+        % store the growth on the major axis.
+        [c_growth_i,c_growth] = getCellFactorLevels( m, 'c_growth' );
+        
+        % Store initial shape data.
+        m.userdata.initialcellshapes = cellshapes( m );
+        
+        % Plot the c_growth cellular factor with rainbow colour-coding.  Use
+        % 'posneg' instead of 'rainbow' if you want a colour scale that goes from
+        % white to red.
+        m = leaf_setcellcolorinfo( m, 'factor', 'c_growth', 'mode', 'rainbow' );
+ end
+    
+    if Steps(m) > 24
+        k = cellshapes( m );
+        cellgrowth = k(:,[1 2]) ./ m.userdata.initialcellshapes(:,[1 2]);
+        
+        % Set the c_growth cellular factor from the growth rate along the
+        % major axis.
+        c_growth(:) = cellgrowth(:,1);
+    end
+    
+    if Steps(m) > 24
+        k = cellshapes( m );
+        cellgrowth = k(:,[1 2]) ./ m.userdata.initialcellshapes(:,[1 2])
+        % The values are printed on the Matlab console.
+        c = perVertexToPerCell( m, id_valve_p );
+       k( c > 0, : )
+       cellgrowth( c > 0, : )
+    end
+       
+    if Steps(m)==3
+        
+        % STYLE
+        
+                m.mgen_production(:, s_style_i) = id_style_p;           
+                m = leaf_mgen_conductivity(m, s_style_i, 0);      % stop conductivity, fixing valves of s_style
+                m = leaf_mgen_absorption(m, s_style_i, 0);         
+                m = leaf_mgen_dilution(m, s_style_i, 0); 
+        
+        % BASE
+        
+                m.mgen_production(:, s_base_i) = id_base_p;           
+                m = leaf_mgen_conductivity(m, s_base_i, 0);      % stop conductivity, clamping values of s_base
+                m = leaf_mgen_absorption(m, s_base_i, 0);         
+                m = leaf_mgen_dilution(m, s_base_i, 0); 
+     
+   
+  
+    
+    end
+    
+     if realtime>=0 
+         
+         % EPHASE
+         
+           id_ephase_p(abs(m.nodes(:,3))>0) = 1;       
+        
+     end
+     
+     if realtime >=48 
+        
+        % EPHASE
+         
+                id_ephase_p(abs(m.nodes(:,3))>0) = 0;
+               
+        % MPHASE
+        
+                id_mphase_p(abs(m.nodes(:,3))>0) = 1; 
+                
+        
+      
+    end
+    
+     
+    if realtime >=216
+        
+        % MPHASE
+        
+                id_mphase_p(abs(m.nodes(:,3))>0) = 0; 
+        
+        % LPHASE
+        
+                id_lphase_p(abs(m.nodes(:,3))>0) = 1;
+        
+                
+        
+    end
+    
+    
+   if realtime >=0
+    %% KRN
+
+                    kapar_p(:) = 0.013.*pro(1,id_ephase_p)...
+                                      .*inh(5,id_base_p.*id_mphase_p)... 
+                                      .*inh(100,id_base_p.*id_lphase_p)...
+                                      .*inh(0.5,s_style_p.*id_lphase_p);
+                                                                                             %.*inh(1.2,id_mphase_p)....*inh(1,id_lphase_p)... 
+                                      
+                                                 
+                                                  
+                                                           
+                                        
+                    kbpar_p(:) = kapar_p;
+                    
+                    kaper_p(:) = 0.006.*inh(1,id_base_p.*id_mphase_p)...
+                                      .*inh(3,id_style_p.*id_mphase_p)...
+                                      .*inh(5,id_rep_p.*id_mphase_p)...
+                                      .*inh(1,id_base_p.*id_lphase_p)...
+                                      .*inh(2,id_style_p.*id_lphase_p)...
+                                      .*inh(5,id_rep_p.*id_lphase_p); 
+                                                                         
+                                                                                                            %.*(id_gdist_p.*id_lphase_p);
+                                                
+                    
+                    kbper_p(:) = kaper_p;
+                    
+                    knor_p(:) = 0.01; 
+   end

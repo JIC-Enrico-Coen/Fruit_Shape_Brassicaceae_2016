@@ -1,0 +1,252 @@
+
+% In this section you may modify the mesh in any way that does not
+% alter the set of nodes.
+
+   if (Steps(m)==0) && m.globalDynamicProps.doinit  % Initialisation code.
+        %% PRN Polariser Regulatory Network 
+            
+            proxorg_ind= m.nodes(:,3)<-19.5;
+            id_proxorg_p(proxorg_ind) = 1;
+            P(proxorg_ind) = 1;
+            m = leaf_fix_mgen( m, polariser_i,'vertex',find(proxorg_ind),'fix', 1);
+            
+            m = leaf_mgen_conductivity(m, polariser_i, 5); 
+            m = leaf_mgen_absorption(m, polariser_i, 0);
+            
+             id_distorg_p(m.nodes(:,3)>17.5) = 1;
+            
+             basenodes_ind= min(m.nodes(:,3));         
+             id_basenodes_p(m.nodes(:,3)==basenodes_ind) =1;
+             
+             m.fixedDFmap( id_basenodes_p==1, 3 ) = true; 
+ 
+             
+         %% Growth factors
+          
+            % STYLE
+                id_style_p(m.nodes(:,3)>10) = 1;
+                 
+                m.mgen_production(:, s_style_i) = id_style_p;           % whereever id_style is s_rep is produced
+                m = leaf_mgen_conductivity(m, s_style_i, 0.4);      % how much s_style is conducted
+                m = leaf_mgen_absorption(m, s_style_i, 0);         % how much s_style is degraded at each node
+                m = leaf_mgen_dilution(m, s_style_i, 0); 
+ 
+                m.morphogenclamp( id_style_p==1, s_style_i ) = 1;       % Clamping the highest value of s_style to 1.
+                s_style_p = 1 * id_style_p; 
+                
+            % BASE
+                id_base_p(m.nodes(:,3)<-16) = 1;
+                
+                m.mgen_production(:, s_base_i) = id_base_p;           % whereever id_rep is s_rep is produced
+                m = leaf_mgen_conductivity(m, s_base_i, 0.4);      % how much s_rep is conducted
+                m = leaf_mgen_absorption(m, s_base_i, 0);         % how much s_rep is degraded at each node
+                m = leaf_mgen_dilution(m, s_base_i, 0); 
+ 
+                m.morphogenclamp( id_base_p==1, s_base_i ) = 1;       % Clamping the highest value of s_base to 1.
+                s_base_p = 1 * id_base_p;  
+                
+           % REP
+                id_rep_p((abs(m.nodes(:,1))<10)&(m.nodes(:,3)<10)) = 1;
+                
+           % MIDVALVE
+                id_midvalve_p((abs(m.nodes(:,2))<7.5)&(m.nodes(:,3)<10)) = 1;     
+                
+           % SHOULDERS
+                id_shoulders_p(m.nodes(:,3)>0) = 1;
+           
+           % INHIBITBASE     
+                m.mgen_production(:, s_inhibitbase_i) = id_base_p;           
+                m = leaf_mgen_conductivity(m, s_inhibitbase_i,15);      % factor used to set up gdist
+                m = leaf_mgen_absorption(m, s_inhibitbase_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibitbase_i, 0); 
+ 
+                m.morphogenclamp(((id_base_p==1)|(id_shoulders_p>0)|(id_midvalve_p>0)), s_inhibitbase_i ) = 1;       % Clamping the highest value of s_inhibitbase to 1 and in the shoulders to 0 to make a linear gradient.
+                s_inhibitbase_p = 1 * id_base_p;
+                
+          % INHIBITMV
+                m.mgen_production(:, s_inhibitmv_i) = id_base_p;           
+                m = leaf_mgen_conductivity(m, s_inhibitmv_i,15);      % factor used to set up gdist
+                m = leaf_mgen_absorption(m, s_inhibitmv_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibitmv_i, 0); 
+ 
+                m.morphogenclamp(((id_base_p==1)|(id_shoulders_p>0)), s_inhibitmv_i ) = 1;       % Clamping the highest value of s_inhibitbase to 1 and in the shoulders to 0 to make a linear gradient.
+                s_inhibitmv_p = 1 * id_base_p;
+                
+          % INHIBITTOP
+                
+                id_inhibittop_p((m.nodes(:,3)>5)&(m.nodes(:,3)<14)&(abs(m.nodes(:,2))>7.5)&(m.nodes(:,3)<14)) = 1; %;
+          
+                m.mgen_production(:, s_inhibittop_i) = id_inhibittop_p;           
+                m = leaf_mgen_conductivity(m, s_inhibittop_i,5);      % factor used to inhibit kpar at top
+                m = leaf_mgen_absorption(m, s_inhibittop_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibittop_i, 0); 
+                
+                m.morphogenclamp(((id_inhibittop_p==1)|(id_base_p>0)|(id_midvalve_p>0)|(id_style_p>0)), s_inhibittop_i ) = 1;       % Clamping the highest value of s_inhibitbase to 1 and at Base 0 to make a linear gradient
+                s_inhibittop_p = 1 * id_inhibittop_p;
+                
+    end
+    
+    if Steps(m)==3
+        
+        % STYLE
+        
+                m.mgen_production(:, s_style_i) = id_style_p;           
+                m = leaf_mgen_conductivity(m, s_style_i, 0);      % stop conductivity, fixing valves of s_style
+                m = leaf_mgen_absorption(m, s_style_i, 0);         
+                m = leaf_mgen_dilution(m, s_style_i, 0); 
+        
+        % BASE
+        
+                m.mgen_production(:, s_base_i) = id_base_p;           
+                m = leaf_mgen_conductivity(m, s_base_i, 0);      % stop conductivity, clamping values of s_base
+                m = leaf_mgen_absorption(m, s_base_i, 0);         
+                m = leaf_mgen_dilution(m, s_base_i, 0); 
+     
+    end
+    
+    if Steps(m)==6
+        
+        % INHIBITBASE     
+                m.mgen_production(:, s_inhibitbase_i) = id_base_p;          
+                m = leaf_mgen_conductivity(m, s_inhibitbase_i, 0);      
+                m = leaf_mgen_absorption(m, s_inhibitbase_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibitbase_i, 0);        
+                
+                
+        %INHIBITTOP
+       
+                m.mgen_production(:, s_inhibittop_i) = id_inhibittop_p;           
+                m = leaf_mgen_conductivity(m, s_inhibittop_i,0);      
+                m = leaf_mgen_absorption(m, s_inhibittop_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibittop_i, 0); 
+                
+        % INHIBITMV
+                m.mgen_production(:, s_inhibitmv_i) = id_base_p;           
+                m = leaf_mgen_conductivity(m, s_inhibitmv_i,0);      % factor used to set up gdist
+                m = leaf_mgen_absorption(m, s_inhibitmv_i, 0);         
+                m = leaf_mgen_dilution(m, s_inhibitmv_i, 0); 
+        
+        % GMIDVALVE
+        
+            id_gmidvalve_p= (1 - s_inhibitmv_p - s_style_p) .*id_midvalve_p ;
+            
+        % GDIST
+        
+            id_gdist_p= (1 - s_inhibitbase_p - s_style_p);
+    
+    end
+    
+     if realtime>=0 
+         
+         % EPHASE
+         
+           id_ephase_p(abs(m.nodes(:,3))>0) = 1;       
+        
+     end
+     
+     if realtime >=48 
+        
+        % EPHASE
+         
+                id_ephase_p(abs(m.nodes(:,3))>0) = 0;
+               
+        % MPHASE
+        
+                id_mphase_p(abs(m.nodes(:,3))>0) = 1; 
+                
+        
+      
+    end
+    
+     
+    if realtime >=192
+        
+        % MPHASE
+        
+                id_mphase_p(abs(m.nodes(:,3))>0) = 0; 
+        
+        % LPHASE
+        
+                id_lphase_p(abs(m.nodes(:,3))>0) = 1;
+        
+                
+        
+    end
+    
+    
+   if realtime >=0
+    %% KRN
+
+                    
+%     kapar_p(:) = 0.014.*pro(1,id_ephase_p)...
+%                                       .*inh(5,id_base_p.*id_mphase_p)... 
+%                                       .*pro(0.2,id_midvalve_p.*id_mphase_p)...
+%                                       .*pro(0.15,id_midvalve_p.*id_lphase_p)...
+%                                       .*inh(1,id_style_p.*id_lphase_p);
+% %                                       .*inh(100,id_base_p.*id_lphase_p)...
+%                                      
+% %                                       .*pro(0.5,id_rep_p.*id_lphase_p)...
+%                                       
+%                                                                                         
+% %                                       .*pro(0.5,id_gmidvalve_p.*id_lphase_p)...                  .*inh(1,id_gmidvalve_p)...
+% %                                       .*inh(6,s_inhibittop_p.*id_lphase_p)...      
+% %                                       .*pro(2,s_inhibitbase_p.*id_lphase_p);
+%                                                                                                %.*inh(1.2,id_mphase_p)....*inh(1,id_lphase_p)... 
+%                                       
+%                                                  
+%                                                   
+%                                                            
+%                                         
+%                     kbpar_p(:) = kapar_p;
+%                     
+%                     kaper_p(:) = 0.0125.*inh(1,s_base_p.*id_mphase_p)...
+%                                       .*inh(3,id_style_p.*id_mphase_p)...
+%                                       .*inh(2,id_rep_p.*id_mphase_p)...
+%                                       .*inh(1,s_base_p.*id_lphase_p)...
+%                                       .*inh(2,s_style_p.*id_lphase_p)...
+%                                       .*inh(2,id_rep_p.*id_lphase_p)...
+%                                       .*inh(1,id_midvalve_p.*id_mphase_p)...
+%                                       .*inh(1,id_midvalve_p.*id_lphase_p);
+% %                                       .*inh(2,s_inhibitbase_p.*id_lphase_p)
+% %                                       .*pro(0.2,s_inhibittop_p.*id_lphase_p)...
+% %                                       .*inh(1,s_base_p.*id_lphase_p)...                                     
+%                                       
+    
+    
+    
+    
+    
+    
+    kapar_p(:) = 0.014.*pro(1,id_ephase_p)...
+                                      .*pro(0.2,id_rep_p.*id_mphase_p)...
+                                      .*inh(5,id_base_p.*id_mphase_p)...
+                                      .*pro(0.15,id_rep_p.*id_lphase_p)...
+                                      .*inh(1,s_style_p.*id_lphase_p); 
+            
+                                                 
+                                                  
+                                                           
+                                        
+                    kbpar_p(:) = kapar_p;
+                    
+                    kaper_p(:) = 0.0125.*inh(1,s_base_p.*id_mphase_p)...
+                                      .*inh(3,id_style_p.*id_mphase_p)...
+                                      .*inh(2,id_rep_p.*id_mphase_p)...
+                                      .*inh(1,s_base_p.*id_lphase_p)...
+                                      .*inh(2,s_style_p.*id_lphase_p)...
+                                      .*inh(2,id_rep_p.*id_lphase_p)...
+                                      .*inh(1,id_midvalve_p.*id_mphase_p)...
+                                      .*inh(1,id_midvalve_p.*id_lphase_p);
+%                                        .*inh(1,id_midvalve_p.*id_lphase_p);
+% % %                                       .*inh(2,s_inhibitbase_p.*id_lphase_p)
+%                                       .*pro(0.2,s_inhibittop_p.*id_lphase_p)...
+%                                       .*inh(1,s_base_p.*id_lphase_p)...                                     
+%                                       
+%                                       .*inh(2,id_rep_p.*id_mphase_p)...
+                                                                                                            %.*(id_gdist_p.*id_lphase_p);
+                                                
+                    
+                    kbper_p(:) = kaper_p;
+                    
+                    knor_p(:) = 0.01; 
+   end

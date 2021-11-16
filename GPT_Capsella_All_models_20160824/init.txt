@@ -1,0 +1,23 @@
+
+% In this section you may modify the mesh in any way whatsoever.
+if (Steps(m)==0) && m.globalDynamicProps.doinit % First iteration
+    m = leaf_fix_vertex( m, 'vertex', [], 'dfs', '' ); % unfix all vertices from the start.
+    m = leaf_plotoptions( m, 'hiresdpi', 300);
+    
+    % Model types
+    m.userdata.ranges.modelname.range{1}= 'MODEL1-E_PHASE_AND_EARLY_M_PHASE';
+    m.userdata.ranges.modelname.range{2}= 'MODEL2-E_PHASE_AND_M_PHASE';
+    m.userdata.ranges.modelname.range{3}= 'MODEL3-E_PHASE_AND_M_PHASE_AND_L_PHASE';
+    
+    m.userdata.ranges.modelname.range{4}= 'MODEL5-NESLIA';
+    m.userdata.ranges.modelname.range{5}= 'MODEL6-LEPIDIUM';
+    m.userdata.ranges.modelname.range{6}= 'MODEL7-ALYSSUM';
+    
+    m.userdata.ranges.modelname.range{7}= 'MODEL8-MUTANT';
+    
+    % Select Model here
+    m.userdata.ranges.modelname.index = 6;
+    
+    
+end
+modelname = m.userdata.ranges.modelname.range{m.userdata.ranges.modelname.index};
